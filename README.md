@@ -11,6 +11,7 @@ This Python module provides a high-level API to communicate and control ST3215 s
 - Rotate continuously in either direction
 - Define and correct middle position
 - EEPROM locking and ID reconfiguration
+- Configurable logging support
 
 
 ## Example Usage
@@ -18,387 +19,487 @@ This Python module provides a high-level API to communicate and control ST3215 s
 ```python
 from st3215 import ST3215
 
+# Initialize the controller
 servo = ST3215('/dev/ttyUSB0')
-ids = servo.ListServos()
+
+# Scan for connected servos
+ids = servo.scan_servos()
 if ids:
-    servo.MoveTo(ids[0], 2048)
+    # Move the first servo to position 2048
+    servo.move_to(ids[0], 2048)
+```
+
+## Logging Configuration
+
+You can configure logging to monitor the library's operations:
+
+```python
+import st3215
+import logging
+
+# Enable debug logging
+st3215.configure_logging(level=logging.DEBUG)
+
+# Or use INFO level for less verbose output
+st3215.configure_logging(level=logging.INFO)
+
+# You can also provide a custom handler
+handler = logging.FileHandler('st3215.log')
+st3215.configure_logging(level=logging.DEBUG, handler=handler)
 ```
 
 ---
 
 ## Full API Documentation
 
-### `PingServo(sts_id)`
-Check if the servo is responding.
+### Discovery & Communication
 
-- **Parameters**: `sts_id` (int) – Servo ID
+#### `ping_servo(servo_id)`
+Check if a servo is responding.
+
+- **Parameters**: `servo_id` (int) – Servo ID
 - **Returns**: `True` if successful, `False` otherwise
 - **Example**:
 ```python
-servo.PingServo(1)
+servo.ping_servo(1)
 ```
 
 ---
 
-### `ListServos()`
-Scan and return a list of all responsive servos. Return `None` in case of error.
+#### `scan_servos()`
+Scan the bus and return a list of all responsive servos.
 
 - **Returns**: `List[int]` of servo IDs
 - **Example**:
 ```python
-servo.ListServos()
+ids = servo.scan_servos()
+print(f"Found servos: {ids}")
 ```
 
 ---
 
-### `ReadLoad(sts_id)`
-Get the motor load in %. Return `None` in case of error.
+### Read Sensor Methods (Telemetry)
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `float` or `None`
+#### `read_load(servo_id)`
+Get the motor load in %.
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `float` (percentage) or `None` in case of error
 - **Example**:
 ```python
-servo.ReadLoad(1)
+load = servo.read_load(1)
+print(f"Load: {load}%")
 ```
 
 ---
 
-### `ReadVoltage(sts_id)`
-Read voltage in volts. Return `None` in case of error.
+#### `read_voltage(servo_id)`
+Read voltage in volts.
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `float` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `float` (volts) or `None` in case of error
 - **Example**:
 ```python
-servo.ReadVoltage(1)
+voltage = servo.read_voltage(1)
+print(f"Voltage: {voltage}V")
 ```
 
 ---
 
-### `ReadCurrent(sts_id)`
-Get current in mA. Return `None` in case of error.
+#### `read_current(servo_id)`
+Get current in mA.
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `float` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `float` (milliamperes) or `None` in case of error
 - **Example**:
 ```python
-servo.ReadCurrent(1)
+current = servo.read_current(1)
+print(f"Current: {current}mA")
 ```
 
 ---
 
-### `ReadTemperature(sts_id)`
-Read current temperature °C. Return `None` in case of error.
+#### `read_temperature(servo_id)`
+Read current temperature in °C.
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (degrees Celsius) or `None` in case of error
 - **Example**:
 ```python
-servo.ReadTemperature(1)
+temp = servo.read_temperature(1)
+print(f"Temperature: {temp}°C")
 ```
 
 ---
 
-### `ReadAccelaration(sts_id)`
-Read current acceleration value in step/s². Return `None` in case of error.
+#### `read_position(servo_id)`
+Read current position.
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (position in steps) or `None` in case of error
 - **Example**:
 ```python
-servo.ReadAccelaration(1)
+position = servo.read_position(1)
+print(f"Position: {position}")
 ```
 
 ---
 
-### `ReadMode(sts_id)`
-Get current mode. Return `None` in case of error.
+#### `read_speed(servo_id)`
+Get current speed.
 
-0: position servo mode 
-1: motor constant speed mode
-2: PWM open-loop speed regulation mode
-3: step servo mode
-
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `Tuple[int, int, int]` (speed, comm_result, error)
 - **Example**:
 ```python
-servo.ReadMode(1)
+speed, comm, error = servo.read_speed(1)
+if comm == 0 and error == 0:
+    print(f"Speed: {speed} step/s")
 ```
 
 ---
 
-### `ReadCorrection(sts_id)`
-Read position position correction value. Return `None` in case of error.
+#### `read_status(servo_id)`
+Read the sensor status of the servo.
 
-Add a position correction in steps.
+Returns a dict with sensor status: `{'Voltage': True, 'Sensor': True, 'Temperature': True, 'Current': True, 'Angle': True, 'Overload': True}`
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `dict` or `None` in case of error
 - **Example**:
 ```python
-servo.ReadCorrection(1)
+status = servo.read_status(1)
+if status:
+    print(f"Status: {status}")
 ```
 
 ---
 
-### `ReadStatus(sts_id)`
-Read the sensors status of the servo. Return a dict with sensor status or `None` in case of error
+#### `is_moving(servo_id)`
+Check if the servo is moving.
 
-`{'Voltage': True, 'Sensor': True, 'Temperature': True, 'Current': True, 'Angle': True, 'Overload': True}`
-
-- **Parameters**: `sts_id` (int)
-- **Returns**: `dict` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `bool` or `None` in case of error
 - **Example**:
 ```python
-servo.ReadStatus(1)
+if servo.is_moving(1):
+    print("Servo is moving")
 ```
-
 
 ---
 
-### `IsMoving(sts_id)`
-Check if the servo is moving. Return `None` in case of error.
+### Read Configuration Methods
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `bool` or `None`
+#### `read_acceleration(servo_id)`
+Read current acceleration value in step/s².
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (acceleration value) or `None` in case of error
 - **Example**:
 ```python
-servo.IsMoving(1)
+acc = servo.read_acceleration(1)
+print(f"Acceleration: {acc} step/s²")
 ```
 
 ---
 
-### `SetAcceleration(sts_id, acc)`
-Set acceleration value in step/s². Return `None` in case of error.
+#### `read_mode(servo_id)`
+Get current operational mode.
+
+Mode values:
+- 0: position servo mode 
+- 1: motor constant speed mode
+- 2: PWM open-loop speed regulation mode
+- 3: step servo mode
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (0-3) or `None` in case of error
+- **Example**:
+```python
+mode = servo.read_mode(1)
+```
+
+---
+
+#### `read_position_correction(servo_id)`
+Read position correction value in steps.
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (correction value) or `None` in case of error
+- **Example**:
+```python
+correction = servo.read_position_correction(1)
+```
+
+---
+
+### Write Configuration Methods
+
+#### `set_acceleration(servo_id, acceleration)`
+Set acceleration value in step/s².
 
 - **Parameters**:
-  - `sts_id` (int)
-  - `acc` (int, 0–254)
-- **Returns**: `True` or `None`
+  - `servo_id` (int)
+  - `acceleration` (int, 0–254) – Unit: 100 step/s²
+- **Returns**: `True` or `None` in case of error
 - **Example**:
 ```python
-servo.SetAcceleration(1, 100)
+servo.set_acceleration(1, 100)
 ```
 
 ---
 
-### `SetSpeed(sts_id, speed)`
-Set servo speed in step/s. Return `None` in case of error.
+#### `set_speed(servo_id, speed)`
+Set servo speed in step/s.
 
 - **Parameters**:
-  - `sts_id` (int)
-  - `speed` (int)
-- **Returns**: `True` or `None`
+  - `servo_id` (int)
+  - `speed` (int, 0-3400) – Unit: step/s
+- **Returns**: `True` or `None` in case of error
 - **Example**:
 ```python
-servo.SetSpeed(1, 3000)
+servo.set_speed(1, 3000)
 ```
 
 ---
 
-### `StopServo(sts_id)`
-Disable torque. Return `None` in case of error.
+#### `set_mode(servo_id, mode)`
+Set operational mode.
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `True` or `None`
-- **Example**:
-```python
-servo.StopServo(1)
-```
-
----
-
-### `StartServo(sts_id)`
-Enable torque. Return `None` in case of error.
-
-- **Parameters**: `sts_id` (int)
-- **Returns**: `True` or `None`
-- **Example**:
-```python
-servo.StartServo(1)
-```
-
----
-
-### `SetMode(sts_id, mode)`
-Set operational mode. Return `None` in case of error.
-
-0: position servo mode 
-1: motor constant speed mode
-2: PWM open-loop speed regulation mode
-3: step servo mode
+Mode values:
+- 0: position servo mode 
+- 1: motor constant speed mode
+- 2: PWM open-loop speed regulation mode
+- 3: step servo mode
 
 - **Parameters**:
-  - `sts_id` (int)
-  - `mode` (0–3)
-- **Returns**: `True` or `None`
+  - `servo_id` (int)
+  - `mode` (int, 0–3)
+- **Returns**: `Tuple[bool, int]` (success, error_code). True if successfully set, None in case of error.
 - **Example**:
 ```python
-servo.SetMode(1, 0)
+success, error = servo.set_mode(1, 0)
 ```
 
 ---
 
-### `CorrectPosition(sts_id, correction)`
-Apply a position correction. Return `None` in case of error.
+#### `set_position_correction(servo_id, correction)`
+Apply a position correction in steps.
 
 - **Parameters**:
-  - `sts_id` (int)
+  - `servo_id` (int)
   - `correction` (int, can be negative)
-- **Returns**: `True` or `None`
+- **Returns**: `Tuple[bool, int]` (success, error_code). True if successfully set, None in case of error.
 - **Example**:
 ```python
-servo.CorrectPosition(1, -100)
+success, error = servo.set_position_correction(1, -100)
 ```
 
 ---
 
-### `Rotate(sts_id, speed)`
-Rotate in continuous mode. Return `None` in case of error.
+#### `write_position(servo_id, position)`
+Direct position write (low-level command).
 
 - **Parameters**:
-  - `sts_id` (int)
-  - `speed` (int, can be negative)
-- **Returns**: `True` or `None`
-- **Example**:
-```python
-servo.Rotate(1, 250)
-```
-
----
-
-### `MoveTo(sts_id, position, speed=2400, acc=50, wait=False)`
-Move to a defined position.
-Set wait to `True` if you want to wait the end of the move before the function returning
-
-- **Parameters**:
-  - `sts_id` (int)
+  - `servo_id` (int)
   - `position` (int)
-  - `speed` (int)
-  - `acc` (int)
-  - `wait` (bool)
-- **Returns**: `True` or `None`
+- **Returns**: `True` or `None` in case of error
 - **Example**:
 ```python
-servo.MoveTo(1, 2048)
+servo.write_position(1, 2048)
 ```
 
 ---
 
-### `WritePosition(sts_id, position)`
-Direct position write. Return `None` in case of error.
+### Torque/Power Control Methods
+
+#### `enable_torque(servo_id)`
+Enable torque on the servo (start the servo).
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `Tuple[bool, int]` (success, error_code). True if successfully enabled, None in case of error.
+- **Example**:
+```python
+success, error = servo.enable_torque(1)
+```
+
+---
+
+#### `disable_torque(servo_id)`
+Disable torque on the servo (stop the servo).
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `True` or `None` in case of error
+- **Example**:
+```python
+servo.disable_torque(1)
+```
+
+---
+
+#### `set_torque_neutral(servo_id)`
+Set the servo to neutral position (defines current position as 2048).
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `True` or `None` in case of error
+- **Example**:
+```python
+servo.set_torque_neutral(1)
+```
+
+---
+
+### Movement Control Methods
+
+#### `move_to(servo_id, position, speed=2400, acceleration=50, wait=False)`
+Move the servo to a pre-defined position.
 
 - **Parameters**:
-  - `sts_id` (int)
-  - `position` (int)
-- **Returns**: `True` or `None`
+  - `servo_id` (int)
+  - `position` (int) – Target position
+  - `speed` (int) – Movement speed in step/s (default: 2400)
+  - `acceleration` (int) – Acceleration in step/s² (default: 50)
+  - `wait` (bool) – Wait for position to be reached before returning (default: False)
+- **Returns**: `True` or `None` in case of error
 - **Example**:
 ```python
-servo.WritePosition(1, 2048)
+# Move to position 2048 with default speed and acceleration
+servo.move_to(1, 2048)
+
+# Move with custom speed and wait for completion
+servo.move_to(1, 3000, speed=1500, acceleration=100, wait=True)
 ```
 
 ---
 
-### `ReadPosition(sts_id)`
-Read current position. Return `None` in case of error.
-
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int` or `None`
-- **Example**:
-```python
-servo.ReadPosition(1)
-```
-
----
-
-### `ReadSpeed(sts_id)`
-Get current speed. Return `None` in case of error.
-
-- **Parameters**: `sts_id` (int)
-- **Returns**: `(int, int, int)`
-- **Example**:
-```python
-speed, comm, error = servo.ReadSpeed(1)
-```
-
----
-
-### `LockEprom(sts_id)`
-Lock the EEPROM. Return `None` in case of error.
-
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int`
-- **Example**:
-```python
-servo.LockEprom(1)
-```
-
----
-
-### `UnLockEprom(sts_id)`
-Unlock the EEPROM. Return `None` in case of error.
-
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int`
-- **Example**:
-```python
-servo.UnLockEprom(1)
-```
-
----
-
-### `ChangeId(sts_id, new_id)`
-Change the servo ID. Return `None` in case of error.
+#### `rotate(servo_id, speed)`
+Rotate in continuous speed mode.
 
 - **Parameters**:
-  - `sts_id` (int)
-  - `new_id` (int)
-- **Returns**: `None` or `str`
+  - `servo_id` (int)
+  - `speed` (int, can be negative for counter-clockwise rotation)
+- **Returns**: `Tuple[bool, int]` (success, error_code). True if successfully started, None in case of error.
 - **Example**:
 ```python
-servo.ChangeId(1, 2)
+# Rotate clockwise
+success, error = servo.rotate(1, 250)
+
+# Rotate counter-clockwise
+success, error = servo.rotate(1, -250)
 ```
 
 ---
 
-### `DefineMiddle(sts_id)`
-Define current position as center (2048). Return `None` in case of error.
+#### `get_blocking_position(servo_id)`
+Get the next blocking position when the servo reaches its physical limit.
+Useful for calibration and finding mechanical limits.
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `True` or `None`
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (blocking position) or `None` in case of error
 - **Example**:
 ```python
-servo.DefineMiddle(1)
+position = servo.get_blocking_position(1)
 ```
 
 ---
 
-### `TareServo(sts_id)`
-Calibrate min/max and redefine middle. Return `None` in case of error.
+### Calibration Methods
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `(min_position, max_position)` or `None`
+#### `calibrate_servo(servo_id)`
+Calibrate a servo by finding its min and max positions, then setting the middle position.
+
+**WARNING**: Only use for servos with at least one blocking position.
+Never use this for free rotation servos.
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `Tuple[int, int]` (min_position, max_position) or `(None, None)` in case of error
 - **Example**:
 ```python
-min_pos, max_pos = servo.TareServo(1)
+min_pos, max_pos = servo.calibrate_servo(1)
+if min_pos is not None:
+    print(f"Range: {min_pos} to {max_pos}")
 ```
 
 ---
 
-### `getBlockPosition(sts_id)`
-Move to physical limit and return position. Return `None` in case of error.
+### EEPROM Management Methods
 
-- **Parameters**: `sts_id` (int)
-- **Returns**: `int` or `None`
+#### `lock_eeprom(servo_id)`
+Lock the servo EEPROM to prevent accidental configuration changes.
+
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (0 in case of success)
 - **Example**:
 ```python
-position = servo.getBlockPosition(1)
+result = servo.lock_eeprom(1)
 ```
 
 ---
 
+#### `unlock_eeprom(servo_id)`
+Unlock the servo EEPROM to allow configuration changes.
 
+- **Parameters**: `servo_id` (int)
+- **Returns**: `int` (0 in case of success)
+- **Example**:
+```python
+result = servo.unlock_eeprom(1)
+```
+
+---
+
+#### `change_servo_id(servo_id, new_id)`
+Change the ID of a servo.
+
+- **Parameters**:
+  - `servo_id` (int) – Current ID of the servo
+  - `new_id` (int) – New ID for the servo (0-253)
+- **Returns**: `None` if successful, otherwise an error message string
+- **Example**:
+```python
+error = servo.change_servo_id(1, 2)
+if error:
+    print(f"Error: {error}")
+```
+
+---
+
+## Backward Compatibility
+
+The library maintains backward compatibility with the older CamelCase API. All old method names are still available but deprecated:
+
+- `PingServo()` → `ping_servo()`
+- `ListServos()` → `scan_servos()`
+- `ReadLoad()` → `read_load()`
+- `ReadVoltage()` → `read_voltage()`
+- `ReadCurrent()` → `read_current()`
+- `ReadTemperature()` → `read_temperature()`
+- `ReadAcceleration()` → `read_acceleration()`
+- `ReadMode()` → `read_mode()`
+- `ReadCorrection()` → `read_position_correction()`
+- `ReadStatus()` → `read_status()`
+- `IsMoving()` → `is_moving()`
+- `SetAcceleration()` → `set_acceleration()`
+- `SetSpeed()` → `set_speed()`
+- `StopServo()` → `disable_torque()`
+- `StartServo()` → `enable_torque()`
+- `SetMode()` → `set_mode()`
+- `CorrectPosition()` → `set_position_correction()`
+- `Rotate()` → `rotate()`
+- `MoveTo()` → `move_to()`
+- `WritePosition()` → `write_position()`
+- `ReadPosition()` → `read_position()`
+- `ReadSpeed()` → `read_speed()`
+- `LockEprom()` → `lock_eeprom()`
+- `UnLockEprom()` → `unlock_eeprom()`
+- `ChangeId()` → `change_servo_id()`
+- `DefineMiddle()` → `set_torque_neutral()`
+- `TareServo()` → `calibrate_servo()`
+- `getBlockPosition()` → `get_blocking_position()`
+
+**Note**: Using deprecated methods will generate deprecation warnings. Please update your code to use the new snake_case methods.
+
+---
 
 ## ST3215 registers
 
