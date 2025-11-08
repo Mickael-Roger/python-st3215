@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "st3215"
+version = "0.0.1"
+description = "A library to manage ST3215 servo motors"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache License 2.0" }
+authors = [
+    { name = "Mickael Roger", email = "mickael@mickael-roger.com" },
+    { name = "Alessio D'Ambrosio", email = "alessio@alessiodam.dev" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Framework :: Robot Framework :: Library",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = ["pyserial==3.5"]
+
+[project.urls]
+Homepage = "https://github.com/Mickael-Roger/python-st3215"
+Repository = "https://github.com/Mickael-Roger/python-st3215"
+
+[project.optional-dependencies]
+test = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["st3215"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["test"]
+python_files = ["test_*.py"]
