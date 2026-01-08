@@ -92,6 +92,16 @@ Comprehensive test of servo control functions.
 - **Purpose**: Test StartServo, SetAcceleration, SetSpeed, rotation mode, position mode, and StopServo
 - **⚠️ Important**: Ensure servo has enough physical clearance for movement
 
+### Test 11: Change baudrate
+Tests baud rate changing functionality.
+- **File**: `test_11_change_baudrate.py`
+- **Purpose**: Change servo communication baud rate and verify
+
+### Test 12: Read Position
+Tests position reading functionality.
+- **File**: `test_12_read_position.py`
+- **Purpose**: Read current servo position
+
 ## Safety Notes
 
 - Ensure proper power supply is connected before running tests
