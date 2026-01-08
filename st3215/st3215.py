@@ -564,5 +564,29 @@ class ST3215(protocol_packet_handler):
         else:
             return "new_id is not between 0 and 253" 
 
+    def ChangeBaudrate(self, sts_id, new_baudrate):
+        """
+        Change Baudrate of a Servo.
 
+        :param sts_id: Actual ID for the servo
+        :param new_baudrate: New baudrate for the servo (in bps)
+
+        :return: None when sucedeed otherwise the error message 
+        """
+        if isinstance(new_baudrate, int) and 0 <= new_baudrate <= 7:
+            
+            if not self.PingServo(sts_id):
+                return f"Could not find servo: {sts_id}" 
+
+            if self.UnLockEprom(sts_id) != COMM_SUCCESS:
+                return "Could not unlock Eprom" 
+
+            if self.write1ByteTxOnly(sts_id, STS_BAUD_RATE, new_baudrate) != COMM_SUCCESS:
+                return "Could not change Servo Baudrate" 
+
+            self.LockEprom(sts_id)
+            return None
+        else:
+            return "baudrate is not valid"
+    
 
