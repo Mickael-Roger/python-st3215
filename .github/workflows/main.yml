@@ -30,7 +30,7 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_PWD }}
       run: |
         export RELEASE_VERSION=`git tag -l | tail -n 1`
-        sed -i "s/IN_PROGRESS/${RELEASE_VERSION}/g" st3215/__init__.py
-        sed -i "s/IN_PROGRESS/${RELEASE_VERSION}/g" setup.py
+        sed -i "s/0.0.1/${RELEASE_VERSION}/g" st3215/__init__.py
+        sed -i "s/0.0.1/${RELEASE_VERSION}/g" setup.py
         python3 setup.py release
         twine upload dist/*
