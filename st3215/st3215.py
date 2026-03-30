@@ -66,11 +66,11 @@ class ST3215(protocol_packet_handler):
         """
         load, comm, error = self.read2ByteTxRx(sts_id, STS_PRESENT_LOAD_L)
         if comm == 0 and error == 0:
-          if load >= 1<<10:
-            load = (1<<10) - load
-          return load
+            if load >= 1<<10:
+                load = (1<<10) - load
+            return load
         else:
-          return None
+            return None
 
     def ReadVoltage(self, sts_id):
         """
