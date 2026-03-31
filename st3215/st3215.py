@@ -57,16 +57,18 @@ class ST3215(protocol_packet_handler):
 
     def ReadLoad(self, sts_id):
         """
-        Load of the servo. 
-        Load value is determined by: The voltage duty cycle of the current control output driving motor
+        Load of the servo.
+        Load value is the 10 bit duty cycle of the motor controller
 
         :param sts_id: Servo ID
 
-        :return: Load value in percentage. None in case of error.
+        :return: motor duty cycle +1023 to -1024. None in case of error.
         """
-        load, comm, error = self.read1ByteTxRx(sts_id, STS_PRESENT_LOAD_L)
+        load, comm, error = self.read2ByteTxRx(sts_id, STS_PRESENT_LOAD_L)
         if comm == 0 and error == 0:
-            return load * 0.1
+            if load >= 1<<10:
+                load = (1<<10) - load
+            return load
         else:
             return None
 
