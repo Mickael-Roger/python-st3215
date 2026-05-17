@@ -138,12 +138,12 @@ class GroupSyncRead:
         if data_length == 1:
             return self.data_dict[sts_id][address-self.start_address+1]
         elif data_length == 2:
-            return self.ph.scs_makeword(self.data_dict[sts_id][address-self.start_address+1],
+            return self.ph.sts_makeword(self.data_dict[sts_id][address-self.start_address+1],
                                 self.data_dict[sts_id][address-self.start_address+2])
         elif data_length == 4:
-            return self.ph.scs_makedword(self.ph.scs_makeword(self.data_dict[sts_id][address-self.start_address+1],
+            return self.ph.sts_makedword(self.ph.sts_makeword(self.data_dict[sts_id][address-self.start_address+1],
                                               self.data_dict[sts_id][address-self.start_address+2]),
-                                 self.ph.scs_makeword(self.data_dict[sts_id][address-self.start_address+3],
+                                 self.ph.sts_makeword(self.data_dict[sts_id][address-self.start_address+3],
                                               self.data_dict[sts_id][address-self.start_address+4]))
         else:
             return 0
